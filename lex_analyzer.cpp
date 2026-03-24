@@ -1,279 +1,142 @@
-#inlclude <bits/stdc++.h>
+#include <bits/stdc++.h>
 
 using namespace std;
 
-struct Token {
-    string type;
-    string lexeme;
-    int line;
+static const unordered_set<string> KEYW = {
+    "alignas","alignof","and","and_eq","asm","auto","bitand","bitor","bool","break",
+    "case","catch","char","class","const","constexpr","continue","default","delete",
+    "do","double","else","enum","explicit","extern","false","float","for","friend",
+    "goto","if","inline","int","long","mutable","namespace","new","noexcept",
+    "nullptr","operator","private","protected","public","register","return",
+    "short","signed","sizeof","static","struct","switch","template","this",
+    "throw","true","try","typedef","typename","union","unsigned","using",
+    "virtual","void","volatile","while"
 };
 
-const unordered_set<string> KEYWORDS = {
-    "alignas","alignof","and","and_eq","asm","auto","bool","break","case","catch","char","char16_t","char32_t","char8_t","class",
-    "compl","concept","const","consteval","constexpr","constinit","const_cast","continue","co_await","co_return","co_yield","decltype",
-    "default","delete","do","double","dynamic_cast","else","enum","explicit","export","extern","false","float","for","friend","goto",
-    "if","inline","int","long","mutable","namespace","new","noexcept","not","not_eq","nullptr","operator","or","or_eq","private",
-    "protected","public","register","reinterpret_cast","requires","return","short","signed","sizeof","static","static_assert",
-    "static_cast","struct","switch","template","this","thread_local","throw","true","try","typedef","typeid","typename","union",
-    "unsigned","using","virtual","void","volatile","wchar_t","while"
-};
+set<string> identifiers;
+set<string> literalSet;
+set<string> operators_;
+set<string> keywords;
+set<string> punctuations;
+set<string> preprocessors;
 
-const unordered_set<char> PUNCTUATIONS = {';',',','(',')','{','}','[',']','?','.',':','#'};
-const unordered_set<char> OPERATOR_CHARS = {'+','-','*','/','%','=','<','>','&','|','^','~','!'};
-const vector<string> MULTI_OPERATORS = {
-    "<<=",">>=","==","!=","<=",">=","&&","||","++","--","+=","-=","*=","/=","%=","<<",">>","->","::","&=","|=","^=","##"
-};
+vector<pair<string,string>> table;
 
-bool isIdentifierStart(char c) {
-    return isalpha(static_cast<unsigned char>(c)) || c == '_';
+void addToken(const string& lex, const string& kind) {
+    table.emplace_back(lex, kind);
+
+    if (kind == "identifier") identifiers.insert(lex);
+    else if (kind == "keyword") keywords.insert(lex);
+    else if (kind == "operator") operators_.insert(lex);
+    else if (kind == "literal") literalSet.insert(lex);
+    else if (kind == "punctuation") punctuations.insert(lex);
+    else if (kind == "preprocessor") preprocessors.insert(lex);
 }
 
-bool isIdentifierPart(char c) {
-    return isalnum(static_cast<unsigned char>(c)) || c == '_';
+bool isValidIdentifier(const string& s) {
+    if (s.empty() || KEYW.count(s)) return false;
+    if (!isalpha(static_cast<unsigned char>(s[0])) && s[0] != '_') return false;
+    return all_of(s.begin()+1, s.end(), [](char c) {
+        return isalnum(static_cast<unsigned char>(c)) || c == '_';
+    });
 }
 
-bool isKeyword(const string& word) {
-    return KEYWORDS.find(word) != KEYWORDS.end();
-}
 
-bool matchMultiOperator(const string& line, size_t index, string& matched) {
-    for (const auto& op : MULTI_OPERATORS) {
-        if (index + op.size() <= line.size() && line.compare(index, op.size(), op) == 0) {
-            matched = op;
-            return true;
-        }
+static const regex PREPROC_RE(R"(^\s*#.*)");
+static const regex TOKEN_RE(
+    R"((\s+)|
+    ("([^"\\]|\\.)*")|
+    ('([^'\\]|\\.)*')|
+    (\d+(\.\d+)?([eE][+-]?\d+)?)|
+    ([A-Za-z_]\w*)|
+    (==|!=|<=|>=|\+\+|--|&&|\|\||<<|>>|[-+*/%=<>&|^!~?:])|
+    ([()\{\}\[\];,]))"
+);
+
+
+vector<string> getTokens(const string& line) {
+    vector<string> tokens;
+
+    if (regex_match(line, PREPROC_RE)) {
+        addToken(line, "preprocessor");
+        return tokens;
     }
-    return false;
+
+    size_t pos = 0;
+    while (pos < line.size()) {
+        smatch m;
+        if (!regex_search(line.begin()+pos, line.end(), m, TOKEN_RE,
+                          regex_constants::match_continuous)) {
+            pos++;
+            continue;
+        }
+
+        if (m[1].matched) {
+            pos += m.length();
+            continue;
+        }
+
+        if (m[2].matched || m[4].matched || m[6].matched) {
+            addToken(m.str(), "literal");
+        }
+        else if (m[8].matched) {
+            string tok = m.str();
+            if (KEYW.count(tok)) addToken(tok, "keyword");
+            else addToken(tok, "identifier");
+        }
+        else if (m[9].matched) addToken(m.str(), "operator");
+        else if (m[10].matched) addToken(m.str(), "punctuation");
+
+        tokens.push_back(m.str());
+        pos += m.length();
+    }
+
+    return tokens;
 }
+
+
+template<typename T>
+void printSet(const T& s, const string& name) {
+    cout << name << ": ";
+    for (const auto& x : s) cout << x << " ";
+    cout << "\n";
+}
+
+void printLexTable() {
+    cout << "\nS.No\tLexeme\t\tType\n";
+    int i = 1;
+    for (const auto& p : table)
+        cout << i++ << "\t" << p.first << "\t\t" << p.second << "\n";
+}
+
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        cout << "Provide input file path\n";
+    if (argc != 2) {
+        cout << "Usage: " << argv[0] << " <file>\n";
         return 1;
     }
-    ifstream source(argv[1]);
-    if (!source) {
-        cout << "Cannot open file\n";
+
+    ifstream in(argv[1]);
+    if (!in) {
+        cout << "File not found\n";
         return 1;
     }
-    vector<vector<Token>> tokenLines;
-    unordered_map<string, size_t> symbolLocations;
-    vector<pair<string, int>> symbolTable;
-    vector<pair<int, string>> diagnostics;
-    size_t identifierCount = 0;
-    size_t literalCount = 0;
-    size_t operatorCount = 0;
-    size_t punctuationCount = 0;
-    size_t keywordCount = 0;
-    bool inBlockComment = false;
+
     string line;
-    int currentLine = 0;
-    while (getline(source, line)) {
-        ++currentLine;
-        vector<Token> tokens;
-        size_t i = 0;
-        while (i < line.size()) {
-            if (inBlockComment) {
-                if (line[i] == '*' && i + 1 < line.size() && line[i + 1] == '/') {
-                    inBlockComment = false;
-                    i += 2;
-                } else {
-                    ++i;
-                }
-                continue;
-            }
-            if (isspace(static_cast<unsigned char>(line[i]))) {
-                ++i;
-                continue;
-            }
-            if (line[i] == '/' && i + 1 < line.size()) {
-                if (line[i + 1] == '/') {
-                    break;
-                }
-                if (line[i + 1] == '*') {
-                    inBlockComment = true;
-                    i += 2;
-                    continue;
-                }
-            }
-            if (line[i] == '"') {
-                size_t start = i;
-                ++i;
-                bool closed = false;
-                while (i < line.size()) {
-                    if (line[i] == '\\' && i + 1 < line.size()) {
-                        i += 2;
-                        continue;
-                    }
-                    if (line[i] == '"') {
-                        closed = true;
-                        ++i;
-                        break;
-                    }
-                    ++i;
-                }
-                string lexeme = line.substr(start, i - start);
-                tokens.push_back({"STRING_LITERAL", lexeme, currentLine});
-                ++literalCount;
-                if (!closed) {
-                    diagnostics.push_back({currentLine, "Unterminated string literal: " + lexeme});
-                }
-                continue;
-            }
-            if (line[i] == '\'') {
-                size_t start = i;
-                ++i;
-                bool closed = false;
-                while (i < line.size()) {
-                    if (line[i] == '\\' && i + 1 < line.size()) {
-                        i += 2;
-                        continue;
-                    }
-                    if (line[i] == '\'') {
-                        closed = true;
-                        ++i;
-                        break;
-                    }
-                    ++i;
-                }
-                string lexeme = line.substr(start, i - start);
-                tokens.push_back({"CHAR_LITERAL", lexeme, currentLine});
-                ++literalCount;
-                if (!closed) {
-                    diagnostics.push_back({currentLine, "Unterminated character literal: " + lexeme});
-                }
-                continue;
-            }
-            if (isdigit(static_cast<unsigned char>(line[i])) || (line[i] == '.' && i + 1 < line.size() && isdigit(static_cast<unsigned char>(line[i + 1])))) {
-                size_t start = i;
-                bool hasDot = false;
-                if (line[i] == '.') {
-                    hasDot = true;
-                    ++i;
-                }
-                while (i < line.size() && isdigit(static_cast<unsigned char>(line[i]))) {
-                    ++i;
-                }
-                if (i < line.size() && line[i] == '.' && !hasDot) {
-                    hasDot = true;
-                    ++i;
-                    while (i < line.size() && isdigit(static_cast<unsigned char>(line[i]))) {
-                        ++i;
-                    }
-                }
-                if (i < line.size() && (line[i] == 'e' || line[i] == 'E')) {
-                    size_t expStart = i;
-                    ++i;
-                    if (i < line.size() && (line[i] == '+' || line[i] == '-')) {
-                        ++i;
-                    }
-                    bool expDigits = false;
-                    while (i < line.size() && isdigit(static_cast<unsigned char>(line[i]))) {
-                        expDigits = true;
-                        ++i;
-                    }
-                    if (!expDigits) {
-                        string fragment = line.substr(start, i - start);
-                        diagnostics.push_back({currentLine, "Invalid numeric literal exponent: " + fragment});
-                    }
-                }
-                if (i < line.size() && (isalpha(static_cast<unsigned char>(line[i])) || line[i] == '_')) {
-                    size_t invalidStart = start;
-                    while (i < line.size() && (isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) {
-                        ++i;
-                    }
-                    string lexeme = line.substr(invalidStart, i - invalidStart);
-                    tokens.push_back({"INVALID", lexeme, currentLine});
-                    diagnostics.push_back({currentLine, "Invalid identifier: " + lexeme});
-                } else {
-                    string lexeme = line.substr(start, i - start);
-                    tokens.push_back({"NUMERIC_LITERAL", lexeme, currentLine});
-                    ++literalCount;
-                }
-                continue;
-            }
-            if (isIdentifierStart(line[i])) {
-                size_t start = i;
-                ++i;
-                while (i < line.size() && isIdentifierPart(line[i])) {
-                    ++i;
-                }
-                string lexeme = line.substr(start, i - start);
-                if (isKeyword(lexeme)) {
-                    tokens.push_back({"KEYWORD", lexeme, currentLine});
-                    ++keywordCount;
-                } else {
-                    tokens.push_back({"IDENTIFIER", lexeme, currentLine});
-                    ++identifierCount;
-                    if (symbolLocations.find(lexeme) == symbolLocations.end()) {
-                        symbolLocations[lexeme] = symbolTable.size();
-                        symbolTable.push_back({lexeme, currentLine});
-                    }
-                }
-                continue;
-            }
-            string matchedOperator;
-            if (matchMultiOperator(line, i, matchedOperator)) {
-                tokens.push_back({"OPERATOR", matchedOperator, currentLine});
-                ++operatorCount;
-                i += matchedOperator.size();
-                continue;
-            }
-            if (OPERATOR_CHARS.find(line[i]) != OPERATOR_CHARS.end()) {
-                string lexeme(1, line[i]);
-                tokens.push_back({"OPERATOR", lexeme, currentLine});
-                ++operatorCount;
-                ++i;
-                continue;
-            }
-            if (PUNCTUATIONS.find(line[i]) != PUNCTUATIONS.end()) {
-                string lexeme(1, line[i]);
-                tokens.push_back({"PUNCTUATION", lexeme, currentLine});
-                ++punctuationCount;
-                ++i;
-                continue;
-            }
-            string lexeme(1, line[i]);
-            tokens.push_back({"UNKNOWN", lexeme, currentLine});
-            diagnostics.push_back({currentLine, "Unknown token: " + lexeme});
-            ++i;
-        }
-        tokenLines.push_back(tokens);
+    while (getline(in, line)) {
+        getTokens(line);
     }
-    if (inBlockComment) {
-        diagnostics.push_back({currentLine, "Unterminated block comment"});
-    }
-    cout <<endl<< "Token Stream\n";
-    for (size_t lineIndex = 0; lineIndex < tokenLines.size(); ++lineIndex) {
-        cout << "Line " << lineIndex + 1 << ":";
-        if (tokenLines[lineIndex].empty()) {
-            cout << " (no tokens)";
-        }
-        cout << "\n";
-        for (const auto& token : tokenLines[lineIndex]) {
-            cout << "  <" << token.type << ", " << token.lexeme << ">\n";
-        }
-    }
-    cout <<endl<< "Symbol Table\n";
-    if (symbolTable.empty()) {
-        cout << "  (empty)\n";
-    } else {
-        cout << left << setw(10) << "Index" << setw(25) << "Identifier" << "FirstLine\n";
-        for (size_t index = 0; index < symbolTable.size(); ++index) {
-            cout << left << setw(10) << index + 1 << setw(25) << symbolTable[index].first << symbolTable[index].second << "\n";
-        }
-    }
-    cout <<endl<< "Category Counts\n";
-    cout << "  Identifiers: " << identifierCount << "\n";
-    cout << "  Literals: " << literalCount << "\n";
-    cout << "  Operators: " << operatorCount << "\n";
-    cout << "  Punctuations: " << punctuationCount << "\n";
-    cout << "  Keywords: " << keywordCount << "\n";
-    if (!diagnostics.empty()) {
-        cout << "Errors\n";
-        for (const auto& entry : diagnostics) {
-            cout << "  Line " << entry.first << ": " << entry.second << "\n";
-        }
-    }
+
+    cout << "\n----- Retrieved Objects -----\n";
+    printSet(identifiers, "Identifiers");
+    printSet(literalSet, "Literals");
+    printSet(keywords, "Keywords");
+    printSet(operators_, "Operators");
+    printSet(punctuations, "Punctuations");
+    printSet(preprocessors, "Preprocessors");
+
+    cout << "\n----- Lexeme Table -----\n";
+    printLexTable();
+
     return 0;
 }
