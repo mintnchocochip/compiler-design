@@ -1,194 +1,189 @@
-#include <bits/stdc++.h>
+#include <iostream>
+#include <vector>
+#include <string>
 using namespace std;
 
 struct Token {
-    string lexeme;
-    string type;
+    string text;
+    string type; // "id", "num", "op", "paren"
 };
 
-bool isOperatorChar(char c) {
-    return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^';
-}
-
-vector<Token> tokenize(const string& expr, vector<string>& errors) {
+class ExpressionAnalyzer {
+public:
     vector<Token> tokens;
-    const int n = static_cast<int>(expr.size());
+    vector<string> errors;
 
-    for (int i = 0; i < n; ) {
-        char c = expr[i];
+    void analyze(const string& expr) {
+        tokens.clear();
+        errors.clear();
+        tokenize(expr);
+        if (errors.empty()) validate();
+    }
 
-        if (isspace(static_cast<unsigned char>(c))) {
-            ++i;
-            continue;
+    void printTokens() const {
+        cout << "\nTokens:\n";
+        for (int i = 0; i < (int)tokens.size(); i++)
+            cout << i << ": " << tokens[i].text << " -> " << tokens[i].type << "\n";
+    }
+
+    bool ok() const { return errors.empty(); }
+
+    void printResult() const {
+        if (errors.empty()) {
+            cout << "\nExpression is syntactically valid.\n";
+        } else {
+            cout << "\nExpression is syntactically invalid.\n";
+            for (int i = 0; i < (int)errors.size(); i++)
+                cout << "Error: " << errors[i] << "\n";
         }
+    }
 
-        if (isdigit(static_cast<unsigned char>(c))) {
-            int j = i;
-            bool dotSeen = false;
-            while (j < n) {
-                char cj = expr[j];
-                if (isdigit(static_cast<unsigned char>(cj))) {
-                    ++j;
-                } else if (cj == '.') {
-                    if (dotSeen) break;
-                    dotSeen = true;
-                    ++j;
-                } else {
-                    break;
+private:
+    bool isSpace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+    bool isDigit(char c) { return c >= '0' && c <= '9'; }
+    bool isAlpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+    bool isAlnum(char c) { return isAlpha(c) || isDigit(c); }
+
+    bool isOpChar(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^';
+    }
+
+    void addToken(const string& t, const string& type) { tokens.push_back({t, type}); }
+
+    void tokenize(const string& expr) {
+        int n = (int)expr.size();
+        int i = 0;
+
+        while (i < n) {
+            char c = expr[i];
+
+            if (isSpace(c)) { i++; continue; }
+
+            if (isDigit(c)) {
+                int j = i;
+                while (j < n && isDigit(expr[j])) j++;
+                if (j < n && expr[j] == '.') {
+                    j++;
+                    while (j < n && isDigit(expr[j])) j++;
                 }
+                addToken(expr.substr(i, j - i), "num");
+                i = j;
+                continue;
             }
-            tokens.push_back({expr.substr(i, j - i), "number"});
-            i = j;
-            continue;
-        }
 
-        if (isalpha(static_cast<unsigned char>(c)) || c == '_') {
-            int j = i;
-            while (j < n) {
-                char cj = expr[j];
-                if (isalnum(static_cast<unsigned char>(cj)) || cj == '_') ++j;
-                else break;
+            if (isAlpha(c) || c == '_') {
+                int j = i;
+                while (j < n && (isAlnum(expr[j]) || expr[j] == '_')) j++;
+                addToken(expr.substr(i, j - i), "id");
+                i = j;
+                continue;
             }
-            tokens.push_back({expr.substr(i, j - i), "identifier"});
-            i = j;
-            continue;
-        }
 
-        if (c == '(' || c == ')') {
-            tokens.push_back({string(1, c), "parenthesis"});
-            ++i;
-            continue;
-        }
-
-        if (isOperatorChar(c)) {
-            string op(1, c);
-            if ((c == '+' || c == '-') && i + 1 < n && expr[i + 1] == c) {
-                op.push_back(c);
-                ++i;
+            if (c == '(' || c == ')') {
+                addToken(string(1, c), "paren");
+                i++;
+                continue;
             }
-            tokens.push_back({op, "operator"});
-            ++i;
-            continue;
-        }
 
-        errors.push_back("Unrecognized character: " + string(1, c));
-        ++i;
-    }
-
-    return tokens;
-}
-
-void printTokens(const vector<Token>& tokens) {
-    cout << "\nTokens after lexical analysis:\n";
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        cout << i << ": " << tokens[i].lexeme << " -> " << tokens[i].type << '\n';
-    }
-}
-
-bool validateParentheses(const vector<Token>& tokens, vector<string>& errors) {
-    vector<char> st;
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        if (tokens[i].lexeme == "(") st.push_back('(');
-        else if (tokens[i].lexeme == ")") {
-            if (st.empty()) {
-                errors.push_back("Extra closing parenthesis at token " + to_string(i));
-                return false;
+            if (isOpChar(c)) {
+                string op(1, c);
+                if ((c == '+' || c == '-') && i + 1 < n && expr[i + 1] == c) {
+                    op.push_back(c);
+                    i++;
+                }
+                addToken(op, "op");
+                i++;
+                continue;
             }
-            st.pop_back();
-        }
-    }
-    if (!st.empty()) {
-        errors.push_back("Missing closing parenthesis");
-        return false;
-    }
-    return true;
-}
 
-bool validateSyntax(const vector<Token>& tokens, vector<string>& errors) {
-    bool expectOperand = true;
-    vector<char> parenStack;
-
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        const Token& t = tokens[i];
-
-        if (t.lexeme == "(") {
-            if (!expectOperand) {
-                errors.push_back("Misplaced '(' before token " + to_string(i));
-                return false;
-            }
-            parenStack.push_back('(');
-            expectOperand = true;
-        }
-        else if (t.lexeme == ")") {
-            if (expectOperand) {
-                errors.push_back("Empty parentheses or operator before ')' at token " + to_string(i));
-                return false;
-            }
-            if (parenStack.empty()) {
-                errors.push_back("Unmatched ')' at token " + to_string(i));
-                return false;
-            }
-            parenStack.pop_back();
-            expectOperand = false;
-        }
-        else if (t.type == "operator") {
-            bool isUnary = expectOperand && (t.lexeme == "+" || t.lexeme == "-" || t.lexeme == "++" || t.lexeme == "--");
-            if (expectOperand && !isUnary) {
-                errors.push_back("Binary operator '" + t.lexeme + "' missing left operand at token " + to_string(i));
-                return false;
-            }
-            expectOperand = true;
-        }
-        else {
-            if (!expectOperand) {
-                errors.push_back("Missing operator before '" + t.lexeme + "' at token " + to_string(i));
-                return false;
-            }
-            expectOperand = false;
+            errors.push_back(string("Unrecognized character: ") + c);
+            i++;
         }
     }
 
-    if (expectOperand && !tokens.empty()) {
-        errors.push_back("Expression ends with operator");
-        return false;
+    bool isUnaryOp(const string& op) {
+        return op == "+" || op == "-" || op == "++" || op == "--";
     }
-    if (!parenStack.empty()) {
-        errors.push_back("Unbalanced parentheses");
-        return false;
+
+    void validate() {
+        vector<char> paren;
+        bool needOperand = true; // at start we need operand or '(' or unary op
+
+        for (int i = 0; i < (int)tokens.size(); i++) {
+            Token t = tokens[i];
+
+            if (t.text == "(") {
+                if (!needOperand) {
+                    errors.push_back("Missing operator before '(' at token " + to_string(i));
+                    return;
+                }
+                paren.push_back('(');
+                needOperand = true;
+                continue;
+            }
+
+            if (t.text == ")") {
+                if (needOperand) {
+                    errors.push_back("Operator before ')' or empty parentheses at token " + to_string(i));
+                    return;
+                }
+                if (paren.empty()) {
+                    errors.push_back("Unmatched ')' at token " + to_string(i));
+                    return;
+                }
+                paren.pop_back();
+                needOperand = false;
+                continue;
+            }
+
+            if (t.type == "op") {
+                if (needOperand) {
+                    if (!isUnaryOp(t.text)) {
+                        errors.push_back("Binary operator '" + t.text + "' missing left operand at token " + to_string(i));
+                        return;
+                    }
+                    needOperand = true;
+                } else {
+                    needOperand = true;
+                }
+                continue;
+            }
+
+            if (t.type == "id" || t.type == "num") {
+                if (!needOperand) {
+                    errors.push_back("Missing operator before '" + t.text + "' at token " + to_string(i));
+                    return;
+                }
+                needOperand = false;
+                continue;
+            }
+
+            errors.push_back("Unknown token '" + t.text + "' at token " + to_string(i));
+            return;
+        }
+
+        if (!paren.empty()) {
+            errors.push_back("Missing closing parenthesis");
+            return;
+        }
+
+        if (needOperand && !tokens.empty()) {
+            errors.push_back("Expression ends with operator");
+            return;
+        }
     }
-    return errors.empty();
-}
+};
 
 int main() {
     cout << "Enter the expression: ";
-    string expression;
-    getline(cin, expression);
+    string expr;
+    getline(cin, expr);
 
-    vector<string> lexicalErrors;
-    vector<Token> tokens = tokenize(expression, lexicalErrors);
+    ExpressionAnalyzer analyzer;
+    analyzer.analyze(expr);
 
-    if (!lexicalErrors.empty()) {
-        for (const auto& err : lexicalErrors) {
-            cout << "Lexical error: " << err << '\n';
-        }
-        cout << "Expression is syntactically invalid due to lexical errors.\n";
-        return 0;
-    }
-
-    printTokens(tokens);
-
-    vector<string> validationErrors;
-    bool parenOk = validateParentheses(tokens, validationErrors);
-    bool syntaxOk = validateSyntax(tokens, validationErrors);
-
-    if (parenOk && syntaxOk && validationErrors.empty()) {
-        cout << "\nExpression is syntactically valid.\n";
-    } else {
-        for (const auto& err : validationErrors) {
-            cout << "Error: " << err << '\n';
-        }
-        cout << "\nExpression is syntactically invalid.\n";
-    }
+    if (analyzer.ok()) analyzer.printTokens();
+    analyzer.printResult();
 
     return 0;
 }
