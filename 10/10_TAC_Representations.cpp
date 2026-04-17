@@ -17,8 +17,6 @@ int main() {
 
     vector<Instruction> stmts;
     string line;
-
-    // Parse the exact human-readable TAC format provided
     while (getline(file, line)) {
         if (line.empty()) continue;
 
@@ -34,8 +32,7 @@ int main() {
             // tok2=j, tok3=<=, tok4=10, tok5=goto, tok6=(3)
 
             // Strip parenthesis from "(3)" to get "3"
-            string target = tok6.substr(1, tok6.size() - 2);
-            stmts.push_back({tok3, tok2, tok4, target}); // (<=, j, 10, 3)
+            stmts.push_back({tok3, tok2, tok4, tok6}); // (<=, j, 10, 3)
         }
         else {
             // It's an assignment. tok1 is the variable (e.g., "S1", "result")
@@ -60,7 +57,6 @@ int main() {
         }
     }
 
-    // 1. QUADRUPLES
     cout << "--- 1. QUADRUPLES ---\n";
     cout << "Loc\tOp\tArg1\tArg2\tResult\n";
     for (int i = 0; i < stmts.size(); i++) {
@@ -76,8 +72,7 @@ int main() {
         }
     }
 
-    // 2. TRIPLES
-    cout << "\n--- 2. TRIPLES ---\n";
+    cout << "\n--- TRIPLES ---\n";
     cout << "Loc\tOp\tArg1\tArg2\n";
     for (int i = 0; i < stmts.size(); i++) {
         string a1 = tMap.count(stmts[i].arg1) ? tMap[stmts[i].arg1] : stmts[i].arg1;
@@ -94,8 +89,7 @@ int main() {
         }
     }
 
-    // 3. INDIRECT TRIPLES
-    cout << "\n--- 3. INDIRECT TRIPLES ---\n";
+    cout << "\n--- INDIRECT TRIPLES ---\n";
     cout << "Ptr\tStatement\n";
     int base_address = 101;
     for (int i = 0; i < stmts.size(); i++) {
