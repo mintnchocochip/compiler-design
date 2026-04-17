@@ -24,7 +24,8 @@ public:
 
 private:
     void tokenize(string s) {
-        for (size_t i = 0; i < s.length(); ) {
+        size_t i = 0;
+        while (i < s.length() ) {
             char c = s[i];
 
             if (isspace(c)) {
