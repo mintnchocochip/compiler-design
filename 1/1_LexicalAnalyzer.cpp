@@ -7,7 +7,7 @@
 
 using namespace std;
 
-// Global sets to store unique items
+
 set<string> identifiers;
 set<string> literals;
 set<string> operators;
@@ -15,16 +15,14 @@ set<string> keywords;
 set<string> punctuations;
 set<string> preprocessors;
 
-// Table to keep the order of tokens
 vector<pair<string, string>> lexTable;
 
-// Set of common C++ keywords
+
 set<string> keywordSet = {
     "int", "float", "char", "double", "void", "if", "else", "for", "while",
     "do", "return", "class", "struct", "public", "private", "protected", "namespace", "using"
 };
 
-// Helper function to add to the table and the correct set
 void addToken(string lexeme, string type) {
     lexTable.push_back({lexeme, type});
 
@@ -36,7 +34,6 @@ void addToken(string lexeme, string type) {
     else if (type == "preprocessor") preprocessors.insert(lexeme);
 }
 
-// Main Lexical Analyzer logic (No Regex!)
 void analyzeLine(string line) {
     int n = line.length();
     int i = 0;
@@ -53,7 +50,7 @@ void analyzeLine(string line) {
         // 2. Preprocessor Directives (e.g., #include <iostream>)
         if (c == '#') {
             addToken(line, "preprocessor");
-            break; // The whole rest of the line is the preprocessor directive
+            break;
         }
 
         // 3. String Literals (e.g., "hello")
@@ -66,7 +63,7 @@ void analyzeLine(string line) {
                 i++;
             }
             if (i < n) {
-                temp += line[i]; // include the closing quote
+                temp += line[i];
                 i++;
             }
             addToken(temp, "literal");
@@ -88,7 +85,7 @@ void analyzeLine(string line) {
             continue;
         }
 
-        // 5. Numeric Literals (e.g., 123, 45.6)
+        // 5. Numeric Literals
         if (isdigit(c)) {
             string temp = "";
             while (i < n && (isdigit(line[i]) || line[i] == '.')) {
@@ -99,7 +96,7 @@ void analyzeLine(string line) {
             continue;
         }
 
-        // 6. Operators (+, -, *, /, =, <, >, ==, ++, etc.)
+        // 6. Operators
         string opChars = "+-*/%=<>!&|";
         if (opChars.find(c) != string::npos) {
             string temp = "";
@@ -114,7 +111,7 @@ void analyzeLine(string line) {
             continue;
         }
 
-        // 7. Punctuations (;, ,, (, ), {, }, [, ])
+        // 7. Punctuations
         string punctChars = "(){}[];,";
         if (punctChars.find(c) != string::npos) {
             string temp = "";
@@ -123,13 +120,11 @@ void analyzeLine(string line) {
             i++;
             continue;
         }
-
-        // If nothing matches, just move forward to prevent infinite loops
         i++;
     }
 }
 
-// Function to print a set nicely
+
 void printSet(const set<string>& s, string name) {
     cout << name << ": ";
     for (const string& x : s) {
@@ -139,7 +134,7 @@ void printSet(const set<string>& s, string name) {
 }
 
 int main() {
-    // Open the hardcoded file
+
     string filename = "lex_input.txt";
     ifstream file(filename);
 
@@ -148,13 +143,12 @@ int main() {
         return 1;
     }
 
-    // Read file line by line
     string line;
     while (getline(file, line)) {
         analyzeLine(line);
     }
 
-    // Print Sets
+
     cout << "\n----- Retrieved Objects -----\n";
     printSet(identifiers, "Identifiers");
     printSet(literals, "Literals");
@@ -163,7 +157,6 @@ int main() {
     printSet(punctuations, "Punctuations");
     printSet(preprocessors, "Preprocessors");
 
-    // Print Table
     cout << "\n----- Lexeme Table -----\n";
     cout << "S.No\tLexeme\t\tType\n";
     cout << "------------------------------------\n";

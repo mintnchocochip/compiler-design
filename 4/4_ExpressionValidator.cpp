@@ -6,8 +6,8 @@
 
 using namespace std;
 
-class ExpressionValidator {
-    // Token structure: type is 'V' (Value/ID), 'O' (Operator), '(', or ')'
+class Validate {
+    // type is 'V' (Value/ID), 'O' (Operator), '(', or ')'
     struct Token { string val; char type; };
     vector<Token> tokens;
     string err = "";
@@ -16,13 +16,10 @@ public:
     void analyze(string expr) {
         tokenize(expr);
         if (err.empty()) validate();
-
-        // Final Output
+        else cout <<"REJECTED";
         if (!err.empty()) cout << "\nINVALID -> " << err << "\n";
         else cout << "\nVALID\n";
     }
-
-private:
     void tokenize(string s) {
         size_t i = 0;
         while (i < s.length() ) {
@@ -31,7 +28,7 @@ private:
             if (isspace(c)) {
                 i++;
             }
-            // 1. Group Identifiers and Numbers together as 'Values' ('V')
+            // 1 Identifiers and Numbers - V
             else if (isalnum(c) || c == '_' || c == '.') {
                 string v = "";
                 while (i < s.length() && (isalnum(s[i]) || s[i] == '_' || s[i] == '.'))
@@ -43,7 +40,7 @@ private:
                 tokens.push_back({string(1, c), c});
                 i++;
             }
-            // 3. Operators ('O')
+            // 3. Operators - O
             else if (string("+-*/%^=").find(c) != string::npos) {
                 string o(1, c);
                 i++;
@@ -56,8 +53,6 @@ private:
                 return;
             }
         }
-
-        // Print tokens
         for (auto t : tokens) cout << "   [" << t.type << "] " << t.val << "\n";
     }
 
@@ -94,9 +89,9 @@ private:
 
 int main() {
     ifstream file("expr_input.txt");
-    string expr = "a + b * (c - ++d)"; // Default if file missing
+    string expr = "a + b * (c - ++d)";
     if (file) getline(file, expr);
 
-    ExpressionValidator().analyze(expr);
+    Validate().analyze(expr);
     return 0;
 }

@@ -23,21 +23,19 @@ int main() {
         stringstream ss(line);
         string num, tok1, tok2, tok3, tok4, tok5, tok6;
 
-        ss >> num; // Reads "1.", "2.", "10." etc.
+        ss >> num;
         ss >> tok1; // "S1" or "if"
 
         if (tok1 == "if") {
-            // Format: if j <= 10 goto (3)
+            // if j <= 10 goto 3
             ss >> tok2 >> tok3 >> tok4 >> tok5 >> tok6;
             // tok2=j, tok3=<=, tok4=10, tok5=goto, tok6=(3)
 
-            // Strip parenthesis from "(3)" to get "3"
             stmts.push_back({tok3, tok2, tok4, tok6}); // (<=, j, 10, 3)
         }
         else {
             // It's an assignment. tok1 is the variable (e.g., "S1", "result")
             ss >> tok2 >> tok3; // tok2 is ":=", tok3 is the first argument
-
             // Array access check: x[S1]
             if (tok3.find('[') != string::npos) {
                 int pos = tok3.find('[');

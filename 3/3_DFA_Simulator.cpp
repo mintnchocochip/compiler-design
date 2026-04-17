@@ -7,16 +7,15 @@
 using namespace std;
 
 int main() {
-    // 1. Open the input file
+
     ifstream file("dfa_input.txt");
-    // 2. Read Number of States and Start State
+
     int numStates;
     file >> numStates;
 
     string startState;
     file >> startState;
 
-    // 3. Read Alphabet
     int numSymbols;
     file >> numSymbols;
 
@@ -25,7 +24,6 @@ int main() {
         file >> alphabet[i];
     }
 
-    // 4. Read all states (Start state + the rest)
     vector<string> states;
     states.push_back(startState);
     for (int i = 1; i < numStates; i++) {
@@ -34,8 +32,8 @@ int main() {
         states.push_back(s);
     }
 
-    // 5. Read Transition Table
-    // We use a Map to easily look up: transitions[{CurrentState, Symbol}] = NextState
+
+    // transitions[{CurrentState, Symbol}] = NextState
     map<pair<string, char>, string> transitions;
 
     for (int i = 0; i < numStates; i++) {
@@ -46,7 +44,6 @@ int main() {
         }
     }
 
-    // 6. Read Final States
     int numFinal;
     file >> numFinal;
     vector<string> finalStates(numFinal);
@@ -54,11 +51,8 @@ int main() {
         file >> finalStates[i];
     }
 
-    // 7. Read and Process Test Strings
     int numStrings;
     file >> numStrings;
-
-    cout << "--- DFA SIMULATION RESULTS ---\n";
 
     for (int i = 0; i < numStrings; i++) {
         string word;
@@ -83,10 +77,8 @@ int main() {
                 break;
             }
 
-            // Look up the next state in our map
             string nextState = transitions[{currentState, c}];
 
-            // Validate: Is the transition undefined? (Represented by "-")
             if (nextState == "-" || nextState == "") {
                 cout << "  State [" << currentState << "] --(" << c << ")--> [UNDEFINED/DEAD STATE]\n";
                 rejectedEarly = true;
@@ -97,11 +89,10 @@ int main() {
             currentState = nextState; // Move to the next state
         }
 
-        // Print Final Decision
+
         if (rejectedEarly) {
             cout << "Result: REJECTED (Invalid symbol or undefined transition)\n";
         } else {
-            // Check if the state we ended up in is one of our final states
             bool isFinal = false;
             for (string f : finalStates) {
                 if (f == currentState) isFinal = true;

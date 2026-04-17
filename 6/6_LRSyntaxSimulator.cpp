@@ -45,14 +45,11 @@ int main() {
         table[{state, term}] = action;
     }
 
-    // 4. Read Input String
     vector<string> input; string token;
     while (file >> token) input.push_back(token);
 
-    cout << "--- LR Parsing Simulation ---\n\n";
     if (input.empty()) { cout << "No input string found.\n"; return 1; }
 
-    // 5. Algorithm Setup
     stack<int> st; st.push(0);
     int cursor = 0;
 
