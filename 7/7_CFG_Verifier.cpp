@@ -38,25 +38,22 @@ bool derive(string current, string target, vector<string>& path) {
     // Try replacing the Non-Terminal with each of its RHS rules
     char nt = current[nt_idx];
     for (string rhs : rules[nt]) {
-        // Build the new string (Prefix + Replacement + Suffix)
-        // Note: Treat "e" as Epsilon (empty string)
         string replacement = (rhs == "e") ? "" : rhs;
         string next_str = current.substr(0, nt_idx) + replacement
             + current.substr(nt_idx + 1);
 
         // Recursive call
         if (derive(next_str, target, path)) {
-            return true; // If any path succeeds, return true!
+            return true;
         }
     }
 
-    path.pop_back(); // Backtrack
+    path.pop_back();
     return false;
 }
 
 int main() {
     ifstream file("cfg_input.txt");
-    if (!file) { cout << "Error: Missing cfg_input.txt\n"; return 1; }
 
     int numRules;
     file >> numRules;
@@ -66,7 +63,7 @@ int main() {
         string lhs, arrow, rhs;
         file >> lhs >> arrow >> rhs;
 
-        if (i == 0) startSymbol = lhs[0]; // First rule defines the start symbol
+        if (i == 0) startSymbol = lhs[0];
         rules[lhs[0]].push_back(rhs);
     }
 

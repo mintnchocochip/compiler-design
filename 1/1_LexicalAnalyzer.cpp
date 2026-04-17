@@ -20,7 +20,7 @@ vector<pair<string, string>> lexTable;
 
 // Set of common C++ keywords
 set<string> keywordSet = {
-    "int", "float", "char", "double", "void", "if", "else", "for", "while", 
+    "int", "float", "char", "double", "void", "if", "else", "for", "while",
     "do", "return", "class", "struct", "public", "private", "protected", "namespace", "using"
 };
 
@@ -142,7 +142,7 @@ int main() {
     // Open the hardcoded file
     string filename = "lex_input.txt";
     ifstream file(filename);
-    
+
     if (!file) {
         cout << "Error: File '" << filename << "' not found.\n";
         return 1;
